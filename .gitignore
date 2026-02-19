@@ -1,0 +1,10 @@
+# データフォルダや出力結果（もしあれば）
+data/
+results/
+figures/
+
+# RやMacの不要なファイル
+.Rproj.user
+*.RData
+*.Rhistory
+.DS_Store
