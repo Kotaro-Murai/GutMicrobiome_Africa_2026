@@ -14,7 +14,7 @@ library(broom.mixed)
 library(future)
 library(furrr)
 library(emmeans)
-library(ggrepel)
+library(patchwork)
 
 # Load custom plot styles
 source("scripts/00_plot_styles.R")
@@ -49,8 +49,8 @@ model_metadata <- metadata %>%
   select(sample_alias, country, study, disease, Analysis_Group) %>%
   mutate(
     # Set Factor levels for Analysis_Group (Important for contrasts)
-    # Order: 1=Industrialized, 2=Non-Ind, 3=Africa
-    Analysis_Group = factor(Analysis_Group, levels = c("Industrialized", "Non-Africa Non-Industrialized", "Africa")),
+    # Order: 1=Industrialized, 2=Non-Ind, 3=Sub-Saharan Africa
+    Analysis_Group = factor(Analysis_Group, levels = c("Industrialized", "Other Non-Industrialized", "Sub-Saharan Africa")),
     
     # Handle NA diseases as Control
     disease = replace_na(disease, "Control")
@@ -95,24 +95,27 @@ run_lmer_and_emmeans <- function(species_name, dataset) {
   
   result <- tryCatch({
     suppressMessages({
-      # 1. LMM Model (Accounting for study and country as random effects)
+      # 1. LMM Model
       model <- lmer(log10_abundance ~ Analysis_Group + disease_group + (1 | study) + (1 | country), data = subset_dt)
       
       # 2. Estimated Marginal Means
       emm <- emmeans(model, ~ Analysis_Group, lmer.df = "satterthwaite")
       
       # 3. Contrasts
-      # Based on Factor levels: 1:Ind, 2:Non-Ind, 3:Africa
       contrast_results <- contrast(emm, 
                                    method = list(
-                                     AvsND   = c(0, -1, 1), # Africa vs Non-Industrialized
-                                     AvsNDev = c(-1, 0, 1)  # Africa vs Industrialized
+                                     SSAvsONI = c(0, -1, 1),
+                                     SSAvsInd = c(-1, 0, 1)
                                    ))
+      res_contrast <- tidy(contrast_results) %>% 
+        select(contrast, estimate, p.value)
+      res_emm <- tidy(emm) %>% 
+        rename(contrast = Analysis_Group) %>% 
+        mutate(contrast = paste0("EMM_", contrast)) %>% 
+        select(contrast, estimate) 
+      bind_rows(res_contrast, res_emm) %>% 
+        mutate(species = species_name, .before = 1)
     })
-    
-    # 4. Tidy results
-    tidy(contrast_results) %>% mutate(species = species_name, .before = 1)
-    
   }, error = function(e) { return(NULL) })
   return(result)
 }
@@ -123,7 +126,7 @@ cat("Starting final analysis loop with emmeans...\n")
 # Prepare data in long format (data.table for speed)
 long_dt <- bind_cols(model_metadata, species_data %>% select(all_of(species_to_keep))) %>%
   pivot_longer(cols = all_of(species_to_keep), names_to = "species", values_to = "abundance") %>%
-  mutate(log10_abundance = log10(abundance + 1E-6)) %>%
+  mutate(log10_abundance = log10(abundance + 1E-4)) %>%
   as.data.table()
 
 setkey(long_dt, species)
@@ -139,7 +142,7 @@ rm(long_dt, species_data); gc()
 
 # --- 5. Format and Save Results ---
 cat("Aggregating LMM results...\n")
-all_contrasts <- rbindlist(purrr::compact(lmm_results_list))
+all_contrasts <- rbindlist(purrr::compact(lmm_results_list), fill = TRUE)
 
 # Save full results
 write_csv(all_contrasts, "results/tables/lmm_results_species_full.csv")
@@ -148,7 +151,7 @@ write_csv(all_contrasts, "results/tables/lmm_results_species_full.csv")
 results_wide <- all_contrasts %>%
   select(species, contrast, estimate, p.value) %>%
   group_by(contrast) %>%
-  mutate(q.value = p.adjust(p.value, method = "BH")) %>%
+  mutate(q.value = if_else(!is.na(p.value), p.adjust(p.value, method = "BH"), NA_real_)) %>%
   ungroup() %>%
   pivot_wider(id_cols = species, 
               names_from = contrast, 
@@ -156,102 +159,121 @@ results_wide <- all_contrasts %>%
 
 write_csv(results_wide, "results/tables/lmm_results_species_wide.csv")
 
-# Extract Africa-specific species (Compared to BOTH groups)
-africa_specific_enriched <- results_wide %>%
-  filter(q.value_AvsND < 0.05 & estimate_AvsND > 0.3 &
-           q.value_AvsNDev < 0.05 & estimate_AvsNDev > 0.3) %>%
-  arrange(desc(estimate_AvsND))
-
-africa_specific_depleted <- results_wide %>%
-  filter(q.value_AvsND < 0.05 & estimate_AvsND < -0.3 &
-           q.value_AvsNDev < 0.05 & estimate_AvsNDev < -0.3) %>%
-  arrange(estimate_AvsND)
-
-# Save lists for downstream phylogenetic tree (Script 06)
-write_csv(africa_specific_enriched, "results/tables/africa_enriched_species.csv")
-write_csv(africa_specific_depleted, "results/tables/africa_depleted_species.csv")
-
-
 # ==============================================================================
-# PART 2: Volcano Plot (Figure 2a)
+# 6. Prepare Supplementary Table 2 (Full LMM Results with Taxonomy)
 # ==============================================================================
+cat("Generating Supplementary Table 2...\n")
 
-cat("Generating Volcano Plot...\n")
-
-# Prepare plotting data (Focusing on Africa vs Non-Industrialized 'AvsND')
-plot_data <- results_wide %>%
+supp_table_2 <- results_wide %>%
   mutate(mOTU_id = str_extract(species, "(?<=\\[).+?(?=\\])")) %>%
   left_join(taxa_data, by = c("mOTU_id" = "id")) %>%
   select(
-    species,
-    estimate = estimate_AvsND, 
-    q_value = q.value_AvsND,
-    taxon_species
+    mOTU_id, species, 
+    domain, phylum, class, order, family, genus, taxon_species,
+    # SSA vs ONI
+    estimate_SSAvsONI, p.value_SSAvsONI, q.value_SSAvsONI,
+    # SSA vs Ind
+    estimate_SSAvsInd, p.value_SSAvsInd, q.value_SSAvsInd,
+    # EMM (Estimated Marginal Means)
+    contains("EMM")
   ) %>%
-  mutate(
-    log10_q = -log10(q_value),
-    clean_name = coalesce(taxon_species, species) %>% 
-      str_remove("\\[.*\\]") %>% 
-      str_remove("^s__") %>%
-      str_trim()
-  )
+  rename(
+    Estimate_SSA_vs_ONI = estimate_SSAvsONI,
+    Pvalue_SSA_vs_ONI = p.value_SSAvsONI,
+    FDR_SSA_vs_ONI = q.value_SSAvsONI,
+    Estimate_SSA_vs_Ind = estimate_SSAvsInd,
+    Pvalue_SSA_vs_Ind = p.value_SSAvsInd,
+    FDR_SSA_vs_Ind = q.value_SSAvsInd
+  ) %>%
+  arrange(FDR_SSA_vs_ONI)
 
-# Thresholds
+write_csv(supp_table_2, "results/tables/Supplementary_Table_2_LMM_results.csv")
+cat("Supplementary Table 2 saved.\n")
+
+
+# ==============================================================================
+# PART 2: Volcano Plots (Figure 2a) - Stacked (SSA vs ONI & SSA vs Ind)
+# ==============================================================================
+
+cat("Generating Stacked Volcano Plots...\n")
+library(patchwork)
+
+results_wide <- read_csv("results/tables/lmm_results_species_wide.csv", show_col_types = FALSE)
+
+# 1. Thresholds
 q_value_threshold <- 0.05
-estimate_threshold <- 0.3 
+estimate_threshold <- 0.1 
 
-plot_data <- plot_data %>%
-  mutate(
-    significance = case_when(
-      q_value < q_value_threshold & estimate > estimate_threshold  ~ "Enriched in Africa",
-      q_value < q_value_threshold & estimate < -estimate_threshold ~ "Depleted in Africa",
-      TRUE                                                         ~ "Not significant"
-    ),
-    # Only label highly significant features to avoid clutter
-    label_text = if_else(
-      q_value < 0.05 & abs(estimate) > 0.3, 
-      clean_name,                              
-      NA_character_                            
+# 2. Prepare plotting data (Base data without strict dual-filtering for colors)
+plot_data <- results_wide %>%
+  mutate(mOTU_id = str_extract(species, "(?<=\\[).+?(?=\\])")) %>%
+  left_join(taxa_data, by = c("mOTU_id" = "id"))
+
+# 3. Colors
+volcano_colors <- c(
+  "Enriched" = LMM_colors[["Enriched"]],
+  "Depleted" = LMM_colors[["Depleted"]],
+  "Not significant" = "gray85" 
+)
+
+# 4. Create Base Plot Function
+create_volcano <- function(df, x_col, y_col, x_label) {
+  
+  df_plot <- df %>%
+    mutate(
+      significance = case_when(
+        .data[[y_col]] < q_value_threshold & .data[[x_col]] > estimate_threshold ~ "Enriched",
+        .data[[y_col]] < q_value_threshold & .data[[x_col]] < -estimate_threshold ~ "Depleted",
+        TRUE ~ "Not significant"
+      )
+    ) %>%
+    arrange(significance != "Not significant")
+  
+  ggplot(df_plot, aes(x = .data[[x_col]], y = -log10(.data[[y_col]]), color = significance)) +
+    geom_vline(xintercept = c(-estimate_threshold, estimate_threshold), linetype = "dashed", color = "gray50", linewidth = 0.25) +
+    geom_hline(yintercept = -log10(q_value_threshold), linetype = "dashed", color = "gray50", linewidth = 0.25) +
+    geom_point(alpha = 0.8, size = 0.8, stroke = 0) +
+    
+    scale_color_manual(values = volcano_colors) +
+    
+    labs(x = x_label, y = expression("-Log"[10]*"(FDR)")) +
+    
+    theme_nature(base_size = 6) +
+    theme(
+      legend.position = "none", 
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank()
     )
-  )
+}
 
-# Plotting
-volcano_plot <- ggplot(plot_data, aes(x = estimate, y = log10_q, color = significance)) +
-  geom_point(alpha = 0.6, size = 2) +
-  
-  geom_text_repel(aes(label = label_text),
-                  max.overlaps = 15,
-                  size = 3,
-                  color = "black",
-                  box.padding = 0.5,
-                  point.padding = 0.2) +
-  
-  geom_vline(xintercept = c(-estimate_threshold, estimate_threshold), linetype = "dashed", color = "gray50") +
-  geom_hline(yintercept = -log10(q_value_threshold), linetype = "dashed", color = "gray50") +
-  
-  scale_color_manual(values = c(
-    "Enriched in Africa" = thesis_colors[["Africa"]],  # Match Africa color from 00_plot_styles
-    "Depleted in Africa" = thesis_colors[["Non-Africa Non-Industrialized"]],  # Match Non-Ind color
-    "Not significant"    = "grey80"
-  ), name = "Significance") +
-  
-  labs(
-    title = "Volcano Plot: Africa vs. Non-Africa Non-Industrialized",
-    subtitle = "Linear Mixed Model Analysis (Random effect: Country & Study)",
-    x = "LMM Estimate (log10 scale)\n<-- Africa Depleted      Africa Enriched -->",
-    y = expression("-Log"[10]*"(FDR)")
-  ) +
-  
-  theme_thesis(base_size = 14) +
+# 5. Generate Individual Plots
+p_oni <- create_volcano(
+  plot_data, 
+  x_col = "estimate_SSAvsONI", 
+  y_col = "q.value_SSAvsONI", 
+  x_label = "LMM estimate\n(Sub-Saharan Africa vs. Other Non-Industrialized)"
+)
+
+p_ind <- create_volcano(
+  plot_data, 
+  x_col = "estimate_SSAvsInd", 
+  y_col = "q.value_SSAvsInd", 
+  x_label = "LMM estimate\n(Sub-Saharan Africa vs. Industrialized)"
+)
+
+# 6. Combine with Patchwork
+combined_volcano <- (p_oni / p_ind) + 
+  plot_layout(guides = "collect") & 
   theme(
-    legend.position = "top",
-    plot.subtitle = element_text(hjust = 0.5, size = 10, color = "gray40"),
-    axis.title.x = element_text(size = 12)
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.key.size = unit(2, "mm"),
+    legend.text = element_text(size = 7),
+    legend.margin = margin(t = 0, b = 0)
   )
 
-# Display and save
-print(volcano_plot)
-ggsave("results/figures/Figure2a_Volcano_AvsND.pdf", plot = volcano_plot, width = 8, height = 7, useDingbats = FALSE)
-ggsave("results/figures/Figure2a_Volcano_AvsND.png", plot = volcano_plot, width = 8, height = 7, dpi = 300)
+# 7. Save
+ggsave("results/figures/Figure2a_Volcano.pdf", plot = combined_volcano, width = 70, height = 125, units = "mm", useDingbats = FALSE)
+ggsave("results/figures/Figure2a_Volcano.png", plot = combined_volcano, width = 70, height = 125, units = "mm", dpi = 300)
 
 cat("Successfully finished Script 05!\n")

@@ -7,3 +7,5 @@ figures/
 *.RData
 *.Rhistory
 .DS_Store
+data/
+results/
