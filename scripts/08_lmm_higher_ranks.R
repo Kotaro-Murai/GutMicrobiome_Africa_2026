@@ -44,7 +44,7 @@ target_ranks <- c("phylum", "class", "order", "family", "genus")
 # --- Function to Aggregate Abundance by Rank ---
 aggregate_by_rank <- function(df, tax_df, rank_level) {
   mapping <- data.frame(original_col = colnames(df)) %>%
-    mutate(id = str_extract(original_col, "(?<=\\[).+?(?=\\])")) %>%
+    mutate(id = str_extract(original_col, "(?<=\\[)[^\\[\\]]+(?=\\][^\\[]*$)")) %>%
     left_join(tax_df, by = "id") %>%
     filter(!is.na(!!sym(rank_level)))
   
@@ -179,11 +179,11 @@ master_tax_map <- taxa_data %>%
   mutate(clean_phylum = str_remove(phylum, "^p__"))
 
 # ==============================================================================
-# Generate Supplementary Table 3 (Full LMM Results for Higher Ranks)
+# Generate Supplementary Table 4 (Full LMM Results for Higher Ranks)
 # ==============================================================================
-cat("Generating Supplementary Table 3 (Higher Ranks LMM)...\n")
+cat("Generating Supplementary Table 4 (Higher Ranks LMM)...\n")
 
-supp_table_3 <- df_all %>%
+supp_table_4 <- df_all %>%
   pivot_wider(
     id_cols = c(Rank, taxon),
     names_from = contrast,
@@ -205,8 +205,8 @@ supp_table_3 <- df_all %>%
   mutate(Rank = factor(Rank, levels = c("phylum", "class", "order", "family", "genus"))) %>%
   arrange(Rank, FDR_SSA_vs_ONI)
 
-write_csv(supp_table_3, "results/tables/Supplementary_Table_3_HigherRanks_LMM.csv")
-cat("Supplementary Table 3 saved.\n\n")
+write_csv(supp_table_4, "results/tables/Supplementary_Table4_HigherRanks_LMM.csv")
+cat("Supplementary Table 4 saved.\n\n")
 
 plot_data <- df_all %>%
   filter(contrast %in% c("SSAvsInd", "SSAvsONI")) %>%
@@ -232,10 +232,6 @@ plot_data <- df_all %>%
     Rank = factor(Rank, levels = c("phylum", "class", "order", "family", "genus"))
   ) %>%
   filter(!str_detect(clean_phylum, "Unassigned|NA"))
-
-plot_data %>%
-  arrange(desc(conservative_est)) %>%
-  write_csv("results/tables/Supplementary_Table_SSA_Specific_Signatures.csv")
 
 top_n_show <- 10 
 est_threshold <- 0.1

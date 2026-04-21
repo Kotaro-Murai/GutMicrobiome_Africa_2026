@@ -48,7 +48,7 @@ cat("Preparing metadata for LMER...\n")
 model_metadata <- metadata %>%
   select(sample_alias, country, study, disease, Analysis_Group) %>%
   mutate(
-    # Set Factor levels for Analysis_Group (Important for contrasts)
+    # Set Factor levels for Analysis_Group
     # Order: 1=Industrialized, 2=Non-Ind, 3=Sub-Saharan Africa
     Analysis_Group = factor(Analysis_Group, levels = c("Industrialized", "Other Non-Industrialized", "Sub-Saharan Africa")),
     
@@ -160,12 +160,12 @@ results_wide <- all_contrasts %>%
 write_csv(results_wide, "results/tables/lmm_results_species_wide.csv")
 
 # ==============================================================================
-# 6. Prepare Supplementary Table 2 (Full LMM Results with Taxonomy)
+# 6. Prepare Supplementary Table 3 (Full LMM Results with Taxonomy)
 # ==============================================================================
-cat("Generating Supplementary Table 2...\n")
+cat("Generating Supplementary Table 3...\n")
 
-supp_table_2 <- results_wide %>%
-  mutate(mOTU_id = str_extract(species, "(?<=\\[).+?(?=\\])")) %>%
+supp_table_3 <- results_wide %>%
+  mutate(mOTU_id = str_extract(species, "(?<=\\[)[^\\[\\]]+(?=\\][^\\[]*$)")) %>%
   left_join(taxa_data, by = c("mOTU_id" = "id")) %>%
   select(
     mOTU_id, species, 
@@ -187,8 +187,8 @@ supp_table_2 <- results_wide %>%
   ) %>%
   arrange(FDR_SSA_vs_ONI)
 
-write_csv(supp_table_2, "results/tables/Supplementary_Table_2_LMM_results.csv")
-cat("Supplementary Table 2 saved.\n")
+write_csv(supp_table_3, "results/tables/Supplementary_Table3_LMM_results.csv")
+cat("Supplementary Table 3 saved.\n")
 
 
 # ==============================================================================
@@ -206,7 +206,7 @@ estimate_threshold <- 0.1
 
 # 2. Prepare plotting data (Base data without strict dual-filtering for colors)
 plot_data <- results_wide %>%
-  mutate(mOTU_id = str_extract(species, "(?<=\\[).+?(?=\\])")) %>%
+  mutate(mOTU_id = str_extract(species, "(?<=\\[)[^\\[\\]]+(?=\\][^\\[]*$)")) %>%
   left_join(taxa_data, by = c("mOTU_id" = "id"))
 
 # 3. Colors
@@ -215,6 +215,11 @@ volcano_colors <- c(
   "Depleted" = LMM_colors[["Depleted"]],
   "Not significant" = "gray85" 
 )
+
+min_est <- min(c(plot_data$estimate_SSAvsONI, plot_data$estimate_SSAvsInd), na.rm = TRUE)
+max_est <- max(c(plot_data$estimate_SSAvsONI, plot_data$estimate_SSAvsInd), na.rm = TRUE)
+pad <- (max_est - min_est) * 0.01
+x_limits <- c(min_est - pad, max_est + pad)
 
 # 4. Create Base Plot Function
 create_volcano <- function(df, x_col, y_col, x_label) {
@@ -233,16 +238,15 @@ create_volcano <- function(df, x_col, y_col, x_label) {
     geom_vline(xintercept = c(-estimate_threshold, estimate_threshold), linetype = "dashed", color = "gray50", linewidth = 0.25) +
     geom_hline(yintercept = -log10(q_value_threshold), linetype = "dashed", color = "gray50", linewidth = 0.25) +
     geom_point(alpha = 0.8, size = 0.8, stroke = 0) +
-    
     scale_color_manual(values = volcano_colors) +
-    
+    coord_cartesian(xlim = x_limits) +
     labs(x = x_label, y = expression("-Log"[10]*"(FDR)")) +
-    
     theme_nature(base_size = 6) +
     theme(
       legend.position = "none", 
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank()
+      panel.grid.major = element_line(color = "gray90", linewidth = 0.2),
+      panel.grid.minor = element_blank(),
+      plot.margin = margin(t = 0, r = 0, b = 15, l = 0, unit = "mm")
     )
 }
 
@@ -251,26 +255,19 @@ p_oni <- create_volcano(
   plot_data, 
   x_col = "estimate_SSAvsONI", 
   y_col = "q.value_SSAvsONI", 
-  x_label = "LMM estimate\n(Sub-Saharan Africa vs. Other Non-Industrialized)"
+  x_label = "LMM estimate"
 )
 
 p_ind <- create_volcano(
   plot_data, 
   x_col = "estimate_SSAvsInd", 
   y_col = "q.value_SSAvsInd", 
-  x_label = "LMM estimate\n(Sub-Saharan Africa vs. Industrialized)"
+  x_label = "LMM estimate"
 )
 
 # 6. Combine with Patchwork
 combined_volcano <- (p_oni / p_ind) + 
-  plot_layout(guides = "collect") & 
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    legend.key.size = unit(2, "mm"),
-    legend.text = element_text(size = 7),
-    legend.margin = margin(t = 0, b = 0)
-  )
+  plot_layout(guides = "collect")
 
 # 7. Save
 ggsave("results/figures/Figure2a_Volcano.pdf", plot = combined_volcano, width = 70, height = 125, units = "mm", useDingbats = FALSE)

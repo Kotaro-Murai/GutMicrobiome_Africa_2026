@@ -70,19 +70,11 @@ group_colors <- c(
   "Sub-Saharan Africa" = "#E69F00"                             
 )
 
-# 4. Color palette for 2-group comparisons (Okabe-Ito style)
+# 4. Color palette for 2-group comparisons
 LMM_colors <- c(
   "Not significant" = "#9CA3AF",
-  "Depleted"        = "#0072B2",
-  "Enriched"        = "#D55E00"                                
-)
-
-# 5. Color palette for Lifestyle (4 groups)
-lifestyle_colors <- c(
-  "Hunter-gatherer"              = "#F5D44F", 
-  "Rural_agrarian / traditional" = "#A3D362", 
-  "Peri-urban / semi-urban"      = "#4CB140", 
-  "Urban"                        = "#007A33"
+  "Depleted"        = "#C0DDF0",
+  "Enriched"        = "#FFB0B0"                                
 )
 
 # 5. Color palette for Lifestyle (4 groups)

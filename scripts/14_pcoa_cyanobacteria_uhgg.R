@@ -153,16 +153,17 @@ p_fig4a <- ggplot(plot_data, aes(x = PCoA1, y = PCoA2, color = Phylum_Group)) +
   
   theme_nature() +
   theme(
-    legend.position = "bottom",
+    legend.position = c(0.99, 0.01), 
+    legend.justification = c(1, 0),
+    legend.background = element_rect(fill = alpha("white", 0.8), color = NA),
     legend.key.size = unit(2, "mm"),
-    legend.direction = "horizontal",
-    legend.box = "horizontal",
+    legend.direction = "vertical",
     legend.text = element_text(size = 5),
     legend.title = element_text(size = 6, face = "bold"),
     legend.margin = margin(l = 1),
     plot.margin = margin(t = 2, r = 2, b = 2, l = 2)
   ) +
-  guides(color = guide_legend(nrow = 3, 
+  guides(color = guide_legend(ncol = 1, 
                               byrow = TRUE,
                               title.position = "top",
                               override.aes = list(size = 1.5, alpha = 1)
@@ -171,17 +172,17 @@ p_fig4a <- ggplot(plot_data, aes(x = PCoA1, y = PCoA2, color = Phylum_Group)) +
 # Save outputs
 outfile <- "results/figures/Figure4a_PCoA_UHGG_Cyanobacteria"
 
-ggsave(paste0(outfile, ".pdf"), p_fig4a, width = 90, height = 90, units = "mm", useDingbats = FALSE)
-ggsave(paste0(outfile, ".png"), p_fig4a, width = 90, height = 90, units = "mm", dpi = 300, bg = "white")
+ggsave(paste0(outfile, ".pdf"), p_fig4a, width = 90, height = 82, units = "mm", useDingbats = FALSE)
+ggsave(paste0(outfile, ".png"), p_fig4a, width = 90, height = 82, units = "mm", dpi = 300, bg = "white")
 
 cat("Successfully saved Figure 4a!\n")
 
 # ==============================================================================
-# 6. Export Supplementary Table 9 (Bacterial Genomes Information)
+# 6. Export Supplementary Table 12 (Bacterial Genomes Information)
 # ==============================================================================
-cat("=== Step 6: Exporting Supplementary Table 9 (All Valid Genomes) ===\n")
+cat("=== Step 6: Exporting Supplementary Table 12 (All Valid Genomes) ===\n")
 
-supp_table_9 <- uhgg_rep %>%
+supp_table_12 <- uhgg_rep %>%
   filter(Species_rep %in% valid_genomes) %>%
   mutate(
     Domain  = str_remove(str_extract(Lineage, "d__[^;]+"), "d__"),
@@ -215,6 +216,6 @@ supp_table_9 <- uhgg_rep %>%
   ) %>%
   arrange(Phylum, Class, Order, Family, Genus, Species)
 
-write_csv(supp_table_9, "results/tables/Supplementary_Table_9_Bacterial_Genomes_UHGG.csv")
+write_csv(supp_table_12, "results/tables/Supplementary_Table12_Bacterial_Genomes_UHGG.csv")
 
-cat("Successfully saved Supplementary Table 9 (Bacterial Genomes Info)!\n")
+cat("Successfully saved Supplementary Table 12 (Bacterial Genomes Info)!\n")

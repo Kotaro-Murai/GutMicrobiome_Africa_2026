@@ -7,13 +7,12 @@
 # ==============================================================================
 
 # --- 0. Setup and Libraries ---
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(data.table)
-  library(sf)
-  library(rnaturalearth)
-  library(patchwork)
-})
+library(tidyverse)
+library(data.table)
+library(sf)
+library(rnaturalearth)
+library(patchwork)
+library(scales)
 
 # Load custom plotting styles
 source("scripts/00_plot_styles.R")
@@ -64,7 +63,7 @@ extract_target_abundance <- function(meta_path, motus_path, dataset_name) {
   
   # Map columns to taxonomy and identify target columns
   mapping <- data.frame(original_col = colnames(motus)) %>%
-    mutate(id = str_extract(original_col, "(?<=\\[).+?(?=\\])")) %>%
+    mutate(id = str_extract(original_col, "(?<=\\[)[^\\[\\]]+(?=\\]$)")) %>%
     left_join(df_tax, by = "id")
   
   target_cols <- mapping %>% filter(str_detect(order, TARGET_ORDER)) %>% pull(original_col)
@@ -158,13 +157,13 @@ generate_and_save_map <- function(biome_name) {
   safe_name <- str_replace_all(biome_name, "[^A-Za-z0-9]", "_") %>% str_replace_all("__+", "_") %>% str_remove_all("^_|_$")
   
   p_map <- ggplot() +
-    geom_sf(data = world_map, fill = "gray90", color = "white", linewidth = 0.1) +
+    geom_sf(data = world_map, fill = "gray90", color = "white", linewidth = 0.05) +
     geom_point(data = filter(df_sub, !Detected_Target), 
                aes(x = longitude, y = latitude), 
-               color = "lightblue", alpha = 0.9, size = 0.2, stroke = 0) +
+               color = "lightblue", alpha = 0.9, size = 0.5, stroke = 0) +
     geom_point(data = filter(df_sub, Detected_Target), 
                aes(x = longitude, y = latitude), 
-               color = "#D55E00", alpha = 0.9, size = 0.3, stroke = 0) +
+               color = "#D55E00", alpha = 0.9, size = 0.5, stroke = 0) +
     coord_sf(expand = FALSE, xlim = c(-180, 180), ylim = c(-80, 90)) + 
     labs(title = biome_name) +
     theme_void() +
@@ -196,7 +195,7 @@ bar_stats <- df_analysis %>%
     .groups = "drop"
   ) %>%
   mutate(
-    Biome_Label = paste0(Biome_Group, "(n=", n_samples, ")")
+    Biome_Label = paste0(Biome_Group, " (n=", comma(n_samples), ")")
   )
 
 # Extract levels for ordering
@@ -250,12 +249,12 @@ cat(" -> Saved Bar Chart (90x30mm).\n")
 
 
 # ==============================================================================
-# 6. Export Supplementary Table 13 (Environmental Samples Metadata & Detection)
+# 6. Export Supplementary Table 16 (Environmental Samples Metadata & Detection)
 # ==============================================================================
-cat("\nExporting Supplementary Table 13 (Environmental Samples Metadata)...\n")
+cat("\nExporting Supplementary Table 16 (Environmental Samples Metadata)...\n")
 dir.create("results/tables/", showWarnings = FALSE, recursive = TRUE)
 
-supp_table_13 <- df_analysis %>%
+supp_table_16 <- df_analysis %>%
   select(
     Sample_ID = sample_alias,
     Dataset,
@@ -273,7 +272,7 @@ supp_table_13 <- df_analysis %>%
   ) %>%
   arrange(Assigned_Biome_Group, Dataset, desc(Detected), Sample_ID)
 
-write_csv(supp_table_13, "results/tables/Supplementary_Table_13_Environmental_Samples.csv")
-cat(" -> Saved Supplementary Table 13 (Sample-level Metadata).\n")
+write_csv(supp_table_16, "results/tables/Supplementary_Table16_Environmental_Samples.csv")
+cat(" -> Saved Supplementary Table 16 (Sample-level Metadata).\n")
 
 cat("\nAnalysis pipeline complete. All outputs saved to results/ directories.\n")

@@ -94,7 +94,7 @@ world_map <- ne_countries(scale = "medium", returnclass = "sf") %>%
   ))
 
 p_map <- ggplot(data = world_map %>% left_join(map_stats, by = "iso_a3")) +
-  geom_sf(aes(fill = Prevalence), color = "white", linewidth = 0.1) + 
+  geom_sf(aes(fill = Prevalence), color = "white", linewidth = 0.05) + 
   coord_sf(expand = FALSE, datum = NA) +
   scale_fill_gradient2(
     low = "#74ADD1",
@@ -134,23 +134,31 @@ bar_stats <- df_analysis %>%
   summarise(
     TotalSamples = n(),
     PositiveSamples = sum(Detected, na.rm = TRUE),
-    Prevalence = PositiveSamples / TotalSamples,
+    Prevalence = (PositiveSamples / TotalSamples) * 100,
     .groups = "drop"
   )
 
-p_bar <- ggplot(bar_stats, aes(x = reorder(region_metalog, -Prevalence), y = Prevalence)) +
-  geom_bar(stat = "identity", width = 0.7, fill = BAR_FILL_COLOR) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = expansion(mult = c(0, 0.05))) +
+p_bar <- ggplot(bar_stats, aes(x = reorder(region_metalog, -Prevalence), y = Prevalence, fill = Prevalence)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black", linewidth = 0.25) +
+  scale_fill_gradient2(
+    low = "#74ADD1",
+    mid = "#FFFFCF",
+    high = "#F46D43",
+    midpoint = 50,
+    limits = c(0, 100) 
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, 100)) +
   labs(
     x = NULL, y = "Prevalence (%)"
   ) +
   theme_nature(base_size = 6) + 
   theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, color = "black", size = 5),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, color = "black", size = 5),
     axis.text.y = element_text(color = "black", size = 5),
     axis.title.y = element_text(size = 5),
     panel.grid.major.x = element_blank(),
-    plot.margin = margin(2, 2, 2, 2)
+    plot.margin = margin(2, 2, 2, 10),
+    legend.position = "none"
   )
 
 # ==============================================================================
@@ -161,14 +169,14 @@ cat("Exporting plots separately...\n")
 outdir <- "results/figures/"
 
 ggsave(paste0(outdir, "Figure3a_16S_Map.pdf"), p_map, 
-       width = 70, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
+       width = 60, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
 ggsave(paste0(outdir, "Figure3a_16S_Map.png"), p_map,
-       width = 70, height = 45, units = "mm", dpi = 300, bg = "white")
+       width = 60, height = 45, units = "mm", dpi = 300, bg = "white")
 
 ggsave(paste0(outdir, "Figure3a_16S_Region.pdf"), p_bar, 
-       width = 20, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
+       width = 35, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
 ggsave(paste0(outdir, "Figure3a_16S_Region.png"), p_bar,
-       width = 20, height = 45, units = "mm", dpi = 300, bg = "white")
+       width = 35, height = 45, units = "mm", dpi = 300, bg = "white")
 
 # Save Supplementary Tables
 cat("Saving supplementary tables...\n")

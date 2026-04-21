@@ -43,7 +43,7 @@ if(!"id" %in% colnames(taxa_data)) colnames(taxa_data)[1] <- "id"
 cat("Extracting Target Taxon...\n")
 # Map column names to taxonomy to find Gastranaerophilales
 mapping <- data.frame(original_col = colnames(species_data)) %>%
-  mutate(id = str_extract(original_col, "(?<=\\[).+?(?=\\])")) %>%
+  mutate(id = str_extract(original_col, "(?<=\\[)[^\\[\\]]+(?=\\]$)")) %>%
   left_join(taxa_data, by = "id")
 
 target_motus <- mapping %>% filter(order == TARGET_TAXON) %>% pull(original_col)
@@ -90,7 +90,7 @@ world_map <- ne_countries(scale = "medium", returnclass = "sf") %>%
   filter(name != "Antarctica")
 
 p_map <- ggplot(data = world_map %>% left_join(map_stats, by = c("name" = "country_map"))) +
-  geom_sf(aes(fill = Prevalence), color = "white", linewidth = 0.1) + 
+  geom_sf(aes(fill = Prevalence), color = "white", linewidth = 0.05) + 
   coord_sf(expand = FALSE, datum = NA) +
   scale_fill_gradient2(
     low = "#74ADD1",
@@ -130,24 +130,32 @@ bar_stats <- df_analysis %>%
   summarise(
     TotalSamples = n(),
     PositiveSamples = sum(Detected, na.rm = TRUE),
-    Prevalence = PositiveSamples / TotalSamples,
+    Prevalence = (PositiveSamples / TotalSamples) * 100,
     .groups = "drop"
   )
 
-p_bar <- ggplot(bar_stats, aes(x = reorder(region, -Prevalence), y = Prevalence)) +
-  geom_bar(stat = "identity", width = 0.7, fill = BAR_FILL_COLOR) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = expansion(mult = c(0, 0.05))) +
+p_bar <- ggplot(bar_stats, aes(x = reorder(region, -Prevalence), y = Prevalence, fill = Prevalence)) +
+  geom_bar(stat = "identity", width = 0.7, color = "black", linewidth = 0.25) +
+  scale_fill_gradient2(
+    low = "#74ADD1",
+    mid = "#FFFFCF",
+    high = "#F46D43",
+    midpoint = 50,
+    limits = c(0, 100) 
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = c(0, 100)) +
   labs(
     x = NULL, y = "Prevalence (%)"
   ) +
   theme_nature(base_size = 6) + 
   theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, color = "black", size = 5),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, color = "black", size = 5),
     axis.text.y = element_text(color = "black", size = 5),
     axis.title.y = element_text(size = 5),
     panel.grid.major.x = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 6, face = "bold", margin = margin(b = 2)),
-    plot.margin = margin(2, 2, 2, 2)
+    plot.margin = margin(2, 2, 2, 10),
+    legend.position = "none"
   )
 
 # ==============================================================================
@@ -158,14 +166,14 @@ cat("Exporting plots separately...\n")
 outdir <- "results/figures/"
 
 ggsave(paste0(outdir, "Figure3a_Metalog_Map.pdf"), p_map, 
-       width = 70, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
+       width = 60, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
 ggsave(paste0(outdir, "Figure3a_Metalog_Map.png"), p_map,
-       width = 70, height = 45, units = "mm", dpi = 300, bg = "white")
+       width = 60, height = 45, units = "mm", dpi = 300, bg = "white")
 
 ggsave(paste0(outdir, "Figure3a_Metalog_Region.pdf"), p_bar, 
-       width = 20, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
+       width = 35, height = 45, units = "mm", useDingbats = FALSE, bg = "transparent")
 ggsave(paste0(outdir, "Figure3a_Metalog_Region.png"), p_bar,
-       width = 20, height = 45, units = "mm", dpi = 300, bg = "white")
+       width = 35, height = 45, units = "mm", dpi = 300, bg = "white")
 
 # Save Supplementary Tables
 cat("Saving supplementary tables...\n")
@@ -181,8 +189,8 @@ cat("Analysis complete! Outputs saved to results/ directory.\n")
 # ==============================================================================
 cat("Saving supplementary tables...\n")
 
-# --- Supplementary Table 4: Country-level Prevalence ---
-supp_table_4 <- map_stats %>%
+# --- Supplementary Table 6: Country-level Prevalence ---
+supp_table_6 <- map_stats %>%
   select(
     Country = country,
     Total_Samples = TotalSamples,
@@ -192,6 +200,6 @@ supp_table_4 <- map_stats %>%
   mutate(Prevalence_Percentage = round(Prevalence_Percentage, 2)) %>%
   arrange(desc(Prevalence_Percentage), Country)
 
-write_csv(supp_table_4, "results/tables/Supplementary_Table_4_Country_Prevalence.csv")
+write_csv(supp_table_6, "results/tables/Supplementary_Table6_Country_Prevalence.csv")
 
 cat("Analysis complete! Outputs saved to results/ directory.\n")

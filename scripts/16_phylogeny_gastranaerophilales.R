@@ -115,7 +115,7 @@ if(!"id" %in% colnames(human_taxa)) colnames(human_taxa)[1] <- "id"
 
 # Identify human target taxonomy columns
 human_mapping <- data.frame(original_col = colnames(human_species_data)) %>%
-  mutate(id = str_extract(original_col, "(?<=\\[).+?(?=\\])")) %>%
+  mutate(id = str_extract(original_col, "(?<=\\[)[^\\[\\]]+(?=\\]$)")) %>%
   left_join(human_taxa, by = "id")
 
 human_target_motus <- human_mapping %>% 
@@ -265,7 +265,7 @@ cat("Successfully saved Figure 5a (90x180mm)!\n")
 
 
 # ==============================================================================
-# 6. Export Supplementary Tables 12 & Prevalence Summary
+# 6. Export Supplementary Tables 15 & Prevalence Summary
 # ==============================================================================
 cat("Exporting Supplementary Tables...\n")
 dir.create("results/tables", showWarnings = FALSE, recursive = TRUE)
@@ -276,7 +276,7 @@ sample_abundance <- animal_abundance_df %>%
   ) %>%
   rename(Gastranaerophilales_Abundance = target_rel_abun)
 
-supp_table_12 <- df_meta_clean %>%
+supp_table_15 <- df_meta_clean %>%
   filter(species_name %in% valid_species) %>%
   left_join(sample_abundance, by = "sample_alias") %>%
   select(
@@ -299,6 +299,6 @@ supp_table_12 <- df_meta_clean %>%
   mutate(Gastranaerophilales_Abundance = signif(Gastranaerophilales_Abundance, 4)) %>%
   arrange(Species_Name, Study, desc(Detected), Sample_ID)
 
-write_csv(supp_table_12, "results/tables/Supplementary_Table_12_Animal_Samples_Metadata.csv")
+write_csv(supp_table_15, "results/tables/Supplementary_Table15_Animal_Samples_Metadata.csv")
 
-cat("Successfully exported Supplementary Table 12 with valid Relative Abundance!\n")
+cat("Successfully exported Supplementary Table 15 with valid Relative Abundance!\n")

@@ -32,7 +32,12 @@ md_tax <- data.table::fread("data/mOTUs_3.0.0_GTDB_tax.tsv.gz") %>% data.frame(c
 # --- 2. Extract Target Taxon ---
 cat("Extracting and aggregating target taxon...\n")
 
-colnames(d_raw) <- colnames(d_raw) %>% str_remove(".* \\[") %>% str_remove("\\]")
+colnames(d_raw) <- if_else(
+  str_detect(colnames(d_raw), "\\["),
+  str_extract(colnames(d_raw), "(?<=\\[)[^\\[\\]]+(?=\\]$)"),
+  colnames(d_raw)
+)
+
 if("-1" %in% colnames(d_raw)) d_raw <- d_raw[, -which(colnames(d_raw) == "-1")]
 
 md2 <- md_tax %>% filter(id %in% colnames(d_raw)) %>% arrange(match(id, colnames(d_raw)))
@@ -174,11 +179,11 @@ ggsave(paste0(outfile_plot, ".png"), p_combined, width = 180, height = 70, units
 cat("Successfully saved Figure 3b\n")
 
 # ==============================================================================
-# 8. Generate Supplementary Table 5 (African Samples Lifestyle Categorization)
+# 8. Generate Supplementary Table 7 (African Samples Lifestyle Categorization)
 # ==============================================================================
-cat("Generating Supplementary Table 5...\n")
+cat("Generating Supplementary Table 7...\n")
 
-supp_table_5 <- df_analysis %>%
+supp_table_7 <- df_analysis %>%
   select(
     Sample_ID = sample_alias,
     Study = study,
@@ -190,6 +195,6 @@ supp_table_5 <- df_analysis %>%
   ) %>%
   arrange(Lifestyle_Category, Country, Study, Location)
 
-write_csv(supp_table_5, "results/tables/Supplementary_Table_5_African_Samples_Lifestyle.csv")
+write_csv(supp_table_7, "results/tables/Supplementary_Table7_African_Samples_Lifestyle.csv")
 
-cat("Supplementary Table 5 saved to results/tables/ directory.\n")
+cat("Supplementary Table 7 saved to results/tables/ directory.\n")

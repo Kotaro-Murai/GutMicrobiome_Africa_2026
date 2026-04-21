@@ -30,7 +30,7 @@ cat("Preparing data for plotting...\n")
 
 # Extract mOTU ID and merge with taxonomy
 plot_data <- results_wide %>%
-  mutate(mOTU_id = str_extract(species, "(?<=\\[).+?(?=\\])")) %>%
+  mutate(mOTU_id = str_extract(species, "(?<=\\[)[^\\[\\]]+(?=\\][^\\[]*$)")) %>%
   left_join(taxa_data, by = c("mOTU_id" = "id")) %>%
   filter(sign(estimate_SSAvsInd) == sign(estimate_SSAvsONI)) %>%
   filter(q.value_SSAvsInd < 0.05 & q.value_SSAvsONI < 0.05) %>%
@@ -45,7 +45,7 @@ plot_data <- results_wide %>%
     
     # 4. Clean up names: Remove [mOTU...], s__, and Unassigned
     clean_name = coalesce(species.y, species.x) %>% 
-      str_remove("\\[.*\\]") %>% 
+      str_remove("\\[[^\\[\\]]+\\]$") %>% 
       str_remove("^s__") %>% 
       str_trim(),
     clean_phylum = str_remove(phylum, "^p__")

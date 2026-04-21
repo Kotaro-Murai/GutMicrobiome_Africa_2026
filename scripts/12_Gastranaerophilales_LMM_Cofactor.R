@@ -22,7 +22,7 @@ forest_colors <- c(
   "Physiology" = "#34495E", 
   "Disease" = "#7F8C8D"    
 )
-tidy_col <- c("Metagenome" = "#18BC9C", "16S rRNA" = "#CCBE93") # Assigned names for consistency
+tidy_col <- c("Metagenome" = "#cbd5e8", "16S rRNA" = "#CCBE93") # Assigned names for consistency
 
 # ==============================================================================
 # PART 1: LMM Forest Plot (Figure 3c)
@@ -39,7 +39,11 @@ md_tax <- data.table::fread("data/mOTUs_3.0.0_GTDB_tax.tsv.gz") %>% data.frame(c
 
 # --- 2. GTDB Order level aggregation ---
 cat("Aggregating to GTDB Order level...\n")
-colnames(d_raw) <- colnames(d_raw) %>% str_remove(".* \\[") %>% str_remove("\\]")
+colnames(d_raw) <- if_else(
+  str_detect(colnames(d_raw), "\\["),
+  str_extract(colnames(d_raw), "(?<=\\[)[^\\[\\]]+(?=\\]$)"),
+  colnames(d_raw)
+)
 if("-1" %in% colnames(d_raw)) d_raw <- d_raw[, -which(colnames(d_raw) == "-1")]
 
 md2 <- md_tax %>% filter(id %in% colnames(d_raw)) %>% arrange(match(id, colnames(d_raw)))
@@ -250,23 +254,23 @@ p_diet_main <- ggplot(plot_df_metag, aes(x = reorder(diet, -r), y = r, fill = da
     plot.margin = margin(t = 5, r = 5, b = 5, l = 5)
   )
 
-# --- Plot Supplementary Figure (16S rRNA ONLY) ---
-plot_df_16s <- df_16s %>% filter(diet %in% diet.list.16s)
+# --- Plot Supplementary Figure (16S rRNA ONLY: Significant Both Directions) ---
+plot_df_16s <- df_16s %>% filter(ast != "")
 
 p_diet_supp <- ggplot(plot_df_16s, aes(x = reorder(diet, -r), y = r, fill = data)) +
   geom_bar(stat = "identity", color = "black", linewidth = 0.25, width = 0.7) +
-  geom_text(aes(label = ast), size = 2.5, vjust = -0.5) +
+  geom_text(aes(label = ast, y = r, vjust = ifelse(r > 0, -0.5, 1.5)), 
+            size = 2.5) +
   scale_fill_manual(values = tidy_col["16S rRNA"]) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
-  labs(y = "Spearman's correlation", x = NULL, title = "16S rRNA Validation") +
+  scale_y_continuous(expand = expansion(mult = c(0.15, 0.15))) + 
+  labs(y = "Spearman's correlation", x = NULL, title = "16S rRNA") +
   theme_nature() +
   theme(
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6), 
     legend.position = "none"
   )
-
-ggsave("results/figures/Supplementary_Figure1_Gastranaerophilales_diet_16s.pdf", plot = p_diet_supp, width = 60, height = 70, units = "mm")
-
+ggsave("results/figures/Supplementary_Figure1_Gastranaerophilales_diet_16s.pdf", plot = p_diet_supp, width = 180, height = 80, units = "mm")
+ggsave("results/figures/Supplementary_Figure1_Gastranaerophilales_diet_16s.png", plot = p_diet_supp, width = 180, height = 80, units = "mm", dpi = 300, bg = "white")
 
 # ==============================================================================
 # PART 3: Combine Plots (Figure 3c and 3d)
@@ -279,22 +283,22 @@ combined_plot <- p_forest + p_diet_main +
 ggsave("results/figures/Figure3_cd_combined.pdf", 
        plot = combined_plot, 
        width = 180, 
-       height = 70, 
+       height = 60, 
        units = "mm")
 ggsave("results/figures/Figure3_cd_combined.png", 
        plot = combined_plot, 
        width = 180, 
-       height = 70, 
+       height = 60, 
        units = "mm", dpi = 300, bg = "white")
 
 cat("Successfully saved Combined Figure 3cd and Supplementary Figure!\n")
 
 # ==============================================================================
-# PART 4: Supplementary Table 7 (LMM Results for Figure 3c)
+# PART 4: Supplementary Table 10 (LMM Results for Figure 3c)
 # ==============================================================================
-cat("Generating Supplementary Table 7 (LMM Results)...\n")
+cat("Generating Supplementary Table 10 (LMM Results)...\n")
 
-supp_table_7 <- plot_df %>%
+supp_table_10 <- plot_df %>%
   select(
     Model_Category = category,
     Variable = term_clean,
@@ -315,16 +319,16 @@ supp_table_7 <- plot_df %>%
   ) %>%
   arrange(Model_Category, desc(Estimate))
 
-write_csv(supp_table_7, "results/tables/Supplementary_Table_7_LMM_Gastranaerophilales.csv")
+write_csv(supp_table_10, "results/tables/Supplementary_Table10_LMM_Gastranaerophilales.csv")
 
-cat("Supplementary Table 7 saved successfully!\n")
+cat("Supplementary Table 10 saved successfully!\n")
 
 # ==============================================================================
-# PART 5: Supplementary Table 8 (Diet Correlations: Metagenome & 16S)
+# PART 5: Supplementary Table 11 (Diet Correlations: Metagenome & 16S)
 # ==============================================================================
-cat("Generating Supplementary Table 8 (Diet Correlations)...\n")
+cat("Generating Supplementary Table 11 (Diet Correlations)...\n")
 
-supp_table_8 <- full_join(
+supp_table_11 <- full_join(
   df_metag %>% 
     select(Diet = diet, 
            r_Metagenome = r, 
@@ -348,6 +352,6 @@ supp_table_8 <- full_join(
   ) %>%
   arrange(desc(r_Metagenome))
 
-write_csv(supp_table_8, "results/tables/Supplementary_Table_8_Diet_Correlations.csv")
+write_csv(supp_table_11, "results/tables/Supplementary_Table11_Diet_Correlations.csv")
 
-cat("Supplementary Table 8 saved successfully!\n")
+cat("Supplementary Table 11 saved successfully!\n")

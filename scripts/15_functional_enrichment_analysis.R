@@ -102,7 +102,7 @@ stats_df$q_value <- p.adjust(stats_df$p_value, method = "BH")
 
 
 # ==============================================================================
-# Filter Significant KOs & Export Supplementary Table 11
+# Filter Significant KOs & Export Supplementary Table 14
 # ==============================================================================
 sig_threshold_q <- 0.05
 sig_threshold_diff <- 0.3
@@ -112,9 +112,9 @@ background_kos <- rownames(stats_df)
 
 cat(sprintf(" -> Found %d significant Gastranaerophilales-enriched KOs.\n", length(target_kos)))
 
-cat("=== Exporting Supplementary Table 11 (All KO Stats) ===\n")
+cat("=== Exporting Supplementary Table 14 (All KO Stats) ===\n")
 
-supp_table_11 <- stats_df %>% 
+supp_table_14 <- stats_df %>% 
   rownames_to_column("KO_ID") %>%
   select(
     KO_ID,
@@ -126,13 +126,13 @@ supp_table_11 <- stats_df %>%
   ) %>%
   arrange(FDR, desc(Prevalence_Difference))
 
-write_csv(supp_table_11, "results/tables/Supplementary_Table_11_All_KOs_Stats.csv")
-cat("Successfully saved Supplementary Table 11 (All KO Stats)!\n")
+write_csv(supp_table_14, "results/tables/Supplementary_Table14_All_KOs_Stats.csv")
+cat("Successfully saved Supplementary Table 14 (All KO Stats)!\n")
 
 # ==============================================================================
-# 3. Figure 4b: KEGG Pathway Enrichment Analysis & Supp Table 10
+# 3. Figure 4b: KEGG Pathway Enrichment Analysis & Supp Table 13
 # ==============================================================================
-cat("=== Step 3: KEGG Enrichment (Figure 4b & Supp Table 10) ===\n")
+cat("=== Step 3: KEGG Enrichment (Figure 4b & Supp Table 13) ===\n")
 
 if(length(target_kos) > 0) {
   
@@ -184,8 +184,8 @@ if(length(target_kos) > 0) {
         ) %>%
         select(-k, -n, -M, -N) %>% 
         arrange(pvalue) 
-      write_csv(res_df, "results/tables/Supplementary_Table_10_KEGG_Enrichment_All.csv")
-      cat("Successfully saved Supplementary Table 10 (All KEGG Results)!\n")
+      write_csv(res_df, "results/tables/Supplementary_Table13_KEGG_Enrichment_All.csv")
+      cat("Successfully saved Supplementary Table 13 (All KEGG Results)!\n")
       
       plot_data_b <- res_df %>%
         filter(p.adjust < 0.05) %>%

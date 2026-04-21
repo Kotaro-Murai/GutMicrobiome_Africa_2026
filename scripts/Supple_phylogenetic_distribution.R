@@ -1,7 +1,7 @@
 # ==============================================================================
 # Script: Supple_phylogenetic_distribution.R
 # Description: Phylogenetic distribution of specific genera across animal species.
-#              Generates Supplementary Figures 3a, 3b, and 3c.
+#              Generates Supplementary Figures 5a, 5b, and 5c.
 # ==============================================================================
 
 # --- 0. Setup and Libraries ---
@@ -25,9 +25,9 @@ ABUNDANCE_THRESHOLD <- 0.0001 # 0.01% relative abundance threshold for detection
 
 # Targets for Supplementary Figure 3
 target_list <- list(
-  list(name = "Prevotella",    fig = "Supplementary_Figure3a_Prevotella"),
-  list(name = "Succinivibrio", fig = "Supplementary_Figure3b_Succinivibrio"),
-  list(name = "Treponema",     fig = "Supplementary_Figure3c_Treponema")
+  list(name = "Prevotella",    fig = "Supplementary_Figure5a_Prevotella"),
+  list(name = "Succinivibrio", fig = "Supplementary_Figure5b_Succinivibrio"),
+  list(name = "Treponema",     fig = "Supplementary_Figure5c_Treponema")
 )
 
 # ==============================================================================
@@ -116,7 +116,7 @@ generate_phylogeny_plot <- function(target_genus, fig_name) {
   
   # --- Human Cohort Process ---
   human_mapping <- data.frame(original_col = colnames(human_species_data)) %>%
-    mutate(id = str_extract(original_col, "(?<=\\[).+?(?=\\])")) %>%
+    mutate(id = str_extract(original_col, "(?<=\\[)[^\\[\\]]+(?=\\]$)")) %>%
     left_join(human_taxa, by = "id")
   
   human_target_motus <- human_mapping %>% 
