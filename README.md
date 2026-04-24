@@ -1,6 +1,6 @@
 # Gut Microbiome Africa 2026
 
-This repository contains the R scripts used for the statistical analysis and visualization in the "Gut Microbiome in Africa" study. 
+This repository contains the R scripts used for the statistical analysis and visualization in the "Global-scale microbiome analyses identify an ancestral gut cyanobacterial lineage enriched in African populations" study. 
 
 ## Overview
 This repository provides:
