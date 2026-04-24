@@ -106,8 +106,8 @@ if(length(dummy_idx) < 2) dummy_idx <- 1:2
 
 d_tree$plot_est_Ind[dummy_idx[1]] <- max_est
 d_tree$plot_est_Ind[dummy_idx[2]] <- -max_est
-d_tree$plot_est_ONI[dummy_idx[1]] <- max_est
-d_tree$plot_est_ONI[dummy_idx[2]] <- -max_est
+d_tree$plot_est_ONI[dummy_idx[1]] <- 0.5
+d_tree$plot_est_ONI[dummy_idx[2]] <- -0.5
 
 d_tree$Status_SSAvsInd <- as.character(d_tree$Status_SSAvsInd)
 d_tree$Status_SSAvsONI <- as.character(d_tree$Status_SSAvsONI)
@@ -179,8 +179,8 @@ p2 <- p1 +
   geom_fruit(
     geom = geom_col,
     mapping = aes(x = plot_est_Ind, fill = Status_SSAvsInd),
-    pwidth = 0.15,  
-    offset = 0.1,  
+    pwidth = 0.10,  
+    offset = 0.07,  
     color = NA,
     orientation = "y",
     axis.params = list(
@@ -189,12 +189,12 @@ p2 <- p1 +
       nbreak = 3
     ),
     grid.params = list(vline = FALSE, hline = FALSE, color = "grey75", size = 0.3)
-    ) +
+  ) +
   geom_fruit(
     geom = geom_col,
     mapping = aes(x = plot_est_ONI, fill = Status_SSAvsONI),
-    pwidth = 0.15,  
-    offset = 0.1,
+    pwidth = 0.10,  
+    offset = 0.05,
     color = NA,
     orientation = "y",
     axis.params = list(
@@ -203,7 +203,7 @@ p2 <- p1 +
       nbreak = 3
     ),
     grid.params = list(vline = FALSE, hline = FALSE, color = "grey75", size = 0.3)
-    ) +
+  ) +
   scale_fill_manual(
     values = cols_status, 
     name = "LMM Estimate", 
@@ -216,8 +216,58 @@ p2 <- p1 +
     guide = guide_legend(direction = "horizontal", title.position = "top", order = 2)
   )
 
+cat("Calculating MRCA nodes for target taxa highlights...\n")
+
+tip_tax <- gtdb_meta %>% 
+  filter(accession %in% pruned_tree$tip.label)
+target_groups <- list(
+  "Prevotella"              = "g__Prevotella\\b",
+  "Gastranaerophilales"     = "o__Gastranaerophilales\\b",
+  "Succinivibrio"           = "g__Succinivibrio\\b",
+  "Bifidobacterium"         = "g__Bifidobacterium\\b",
+  "Treponema"               = "g__Treponema_D\\b",
+  "Phascolarctobacterium_A" = "g__Phascolarctobacterium_A\\b",
+  "Bacteroides"             = "g__Bacteroides\\b",
+  "Cryptobacteroides"       = "g__Cryptobacteroides\\b",
+  "CAG_95"        = "g__CAG-95\\b",
+  "CAG_83"        = "g__CAG-83\\b",
+  "ER4"           = "g__ER4\\b",
+  "Faecousia"     = "g__Faecousia\\b",
+  "Acetatifactor" = "g__Acetatifactor\\b",
+  "Enterocloster" = "g__Enterocloster\\b",
+  "Lawsonibacter" = "g__Lawsonibacter\\b"
+)
+highlight_nodes <- purrr::map_dfr(names(target_groups), function(grp) {
+  pattern <- target_groups[[grp]]
+  matched_tips <- tip_tax %>% 
+    filter(str_detect(gtdb_taxonomy, pattern)) %>% 
+    pull(accession)
+  if (length(matched_tips) == 0) return(NULL)
+  node_id <- ifelse(
+    length(matched_tips) == 1,
+    which(pruned_tree$tip.label == matched_tips),
+    MRCA(pruned_tree, matched_tips)
+  )
+  
+  tibble(group = grp, node = node_id)
+})
+
+p3 <- p2 +
+  new_scale_fill() + 
+  geom_hilight(
+    data = highlight_nodes,
+    mapping = aes(node = node, fill = group),
+    alpha = 0.3,
+    extendto = 3,
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = colorRampPalette(brewer.pal(8, "Set2"))(nrow(highlight_nodes)),
+    name = "Highlighted Taxa"
+  )
+
 # Apply final theme 
-p_final <- p2 +
+p_final <- p3 +
   theme(
     legend.position = "bottom",
     legend.box = "vertical",          

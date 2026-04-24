@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: 12_Gastranaerophilales_LMM_Cofactor.R
+# Script: 12_Gastranaerophilales_LMM_cofactor.R
 # Description: LMM Forest Plot of Gastranaerophilales associations (Figure 3c) &
 #              Diet correlation Barplots (Figure 3d, Metagenome only).
 #              16S rRNA diet correlations are saved as a supplementary figure.
@@ -269,8 +269,8 @@ p_diet_supp <- ggplot(plot_df_16s, aes(x = reorder(diet, -r), y = r, fill = data
     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 6), 
     legend.position = "none"
   )
-ggsave("results/figures/Supplementary_Figure1_Gastranaerophilales_diet_16s.pdf", plot = p_diet_supp, width = 180, height = 80, units = "mm")
-ggsave("results/figures/Supplementary_Figure1_Gastranaerophilales_diet_16s.png", plot = p_diet_supp, width = 180, height = 80, units = "mm", dpi = 300, bg = "white")
+ggsave("results/figures/Supplementary_Figure2_Gastranaerophilales_diet_16s.pdf", plot = p_diet_supp, width = 180, height = 80, units = "mm")
+ggsave("results/figures/Supplementary_Figure2_Gastranaerophilales_diet_16s.png", plot = p_diet_supp, width = 180, height = 80, units = "mm", dpi = 300, bg = "white")
 
 # ==============================================================================
 # PART 3: Combine Plots (Figure 3c and 3d)

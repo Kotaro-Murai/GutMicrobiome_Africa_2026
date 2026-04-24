@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: 09_Metalog_Map_Gastranaerophilales.R
+# Script: 09_Metalog_map_Gastranaerophilales.R
 # Description: Generates map and bar plot (Figure 3a) of 
 #              Gastranaerophilales prevalence using Metalog (Metagenome) data.
 # Author: Kotaro Murai

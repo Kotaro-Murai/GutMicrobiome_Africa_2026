@@ -1,7 +1,7 @@
 # ==============================================================================
 # Script: Supple_lifestyle_location_prevalence.R
 # Description: Combined Barplot of Gastranaerophilales prevalence by Lifestyle 
-#              (Left) and Location faceted by Lifestyle (Right). (Supplementary Figure 2)
+#              (Left) and Location faceted by Lifestyle (Right). (Supplementary Figure 1)
 # ==============================================================================
 
 library(tidyverse)
@@ -189,14 +189,12 @@ p_right <- ggplot(prev_location, aes(x = plot_label, y = prevalence, fill = life
 # ==============================================================================
 # 7. Combine and Save
 # ==============================================================================
-cat("Combining and saving Supplementary Figure 2...\n")
+cat("Combining and saving Supplementary Figure 1...\n")
 
 p_combined <- p_left + p_right + 
   plot_layout(widths = c(1, 5))
 
-outfile_plot <- "results/figures/Supplementary_Figure2_Prevalence"
+outfile_plot <- "results/figures/Supplementary_Figure1_Prevalence"
 
 ggsave(paste0(outfile_plot, ".pdf"), p_combined, width = 180, height = 100, units = "mm")
 ggsave(paste0(outfile_plot, ".png"), p_combined, width = 180, height = 100, units = "mm", dpi = 300, bg = "white")
-
-cat("Successfully saved Supplementary Figure 2\n")

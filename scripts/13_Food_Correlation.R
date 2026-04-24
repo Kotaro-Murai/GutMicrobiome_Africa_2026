@@ -1,3 +1,9 @@
+# ==============================================================================
+# Script: 13_food_correlation.R
+# Author: Kotaro Murai
+# Description:Diet correlation Barplots.
+# ==============================================================================
+
 library(tidyverse)
 
 source("scripts/00_plot_styles.R")

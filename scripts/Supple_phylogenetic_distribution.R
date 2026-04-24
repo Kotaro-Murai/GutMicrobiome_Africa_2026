@@ -1,7 +1,7 @@
 # ==============================================================================
 # Script: Supple_phylogenetic_distribution.R
 # Description: Phylogenetic distribution of specific genera across animal species.
-#              Generates Supplementary Figures 5a, 5b, and 5c.
+#              Generates Supplementary Figures 4a, 4b, and 4c.
 # ==============================================================================
 
 # --- 0. Setup and Libraries ---
@@ -25,9 +25,9 @@ ABUNDANCE_THRESHOLD <- 0.0001 # 0.01% relative abundance threshold for detection
 
 # Targets for Supplementary Figure 3
 target_list <- list(
-  list(name = "Prevotella",    fig = "Supplementary_Figure5a_Prevotella"),
-  list(name = "Succinivibrio", fig = "Supplementary_Figure5b_Succinivibrio"),
-  list(name = "Treponema",     fig = "Supplementary_Figure5c_Treponema")
+  list(name = "Prevotella",    fig = "Supplementary_Figure4a_Prevotella"),
+  list(name = "Succinivibrio", fig = "Supplementary_Figure4b_Succinivibrio"),
+  list(name = "Treponema",     fig = "Supplementary_Figure4c_Treponema")
 )
 
 # ==============================================================================

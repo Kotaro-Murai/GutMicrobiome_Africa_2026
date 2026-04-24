@@ -21,8 +21,8 @@ CONFIG <- list(
   meta_file    = "data/genomes-all_metadata.tsv.gz",
   ko_matrix    = "data/genome_ko_matrix_species_rep_uhgg.csv.gz",
   mapping_file = "results/tables/flagellar_ko_gene_mapping.csv",
-  out_pdf      = "results/figures/Supplementary_Figure2_Flagellar_Heatmap_Clustered.pdf",
-  out_png      = "results/figures/Supplementary_Figure2_Flagellar_Heatmap_Clustered.png",
+  out_pdf      = "results/figures/Supplementary_Figure3_Flagellar_Heatmap_Clustered.pdf",
+  out_png      = "results/figures/Supplementary_Figure3_Flagellar_Heatmap_Clustered.png",
   target_order = "o__Gastranaerophilales",
   kegg_pathway = "path:map02040"
 )
